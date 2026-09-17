@@ -1,0 +1,151 @@
+name: muscaltdb-ucvm-ci
+
+on:
+  push:
+    branches: [ main ]
+##    branches: [ foofoo ]
+
+jobs:
+  muscaltdb-build-ucvm-linux:
+    runs-on: ubuntu-latest
+#    needs: [muscaltdb-build-ucvm-mac]
+    strategy:
+      matrix:
+        python-version: [3.7]
+    steps:
+    - name: set UCVM_SRC_PATH 
+      run: echo "UCVM_SRC_PATH=$RUNNER_WORKSPACE/muscaltdb/ucvm" >> $GITHUB_ENV
+    - name: set UCVM_INSTALL_PATH 
+      run: echo "UCVM_INSTALL_PATH=$RUNNER_WORKSPACE/muscaltdb/target" >> $GITHUB_ENV
+### build ucvm(main) first 
+    - name: get-ucvm 
+      uses: actions/checkout@v4
+      with: 
+        repository: 'SCECcode/UCVM'
+##        ref: testMei
+        path: ucvm
+    - id: build-ucvm
+      name: build ucvm
+      uses: ./ucvm/.github/actions/build-ucvm-action
+      with:
+         initiating-repo: 'muscaltdb'
+         target-model: 'muscaltdb'
+    - name: get-result
+      run: more ${{ steps.build-ucvm.outputs.build-log }}
+      shell: bash
+    - name: move stock muscaltdb away
+      run: (rm -rf $RUNNER_WORKSPACE/muscaltdb/ucvm/work/model/muscaltdb)
+      shell: bash
+### build muscaltdb from github 
+    - name: checkout muscaltdb main
+      uses: actions/checkout@v4
+      with: 
+        path: muscaltdb
+    - name: move it to the right location
+      run: (mv muscaltdb $RUNNER_WORKSPACE/muscaltdb/ucvm/work/model; pwd; ls)
+      shell: bash
+    - name: build muscaltdb as part of ucvm 
+      run: (cd $RUNNER_WORKSPACE/muscaltdb/ucvm/work/model/muscaltdb; ./.github/scripts/muscaltdb-build-with-ucvm.sh)
+      shell: bash
+#    - name: Start SSH debug with tmate
+#      if: ${{ failure() }}
+#      uses: mxschmitt/action-tmate@v3
+#      with:
+#        limit-access-to-actor: true
+#    - name: sleep to keep runner alive
+#      run: sleep 3600
+### check ucvm is still valid
+    - name: check on ucvm
+      run: (source $UCVM_INSTALL_PATH/conf/ucvm_env.sh; ucvm_query -H)
+      shell: bash
+    - name: test muscaltdb with ucvm
+      run: (cd $RUNNER_WORKSPACE/muscaltdb/ucvm/work/model/muscaltdb; source $UCVM_INSTALL_PATH/conf/ucvm_env.sh; ./.github/scripts/muscaltdb-test-ucvm.sh)
+      shell: bash
+    - name: test muscaltdb under ucvm
+      run: (cd $RUNNER_WORKSPACE/muscaltdb/ucvm; source $UCVM_INSTALL_PATH/conf/ucvm_env.sh; ./.github/scripts/ucvm-test.sh)
+      shell: bash
+
+  muscaltdb-build-ucvm-mac:
+    if: ${{ success() }}
+    needs: [muscaltdb-build-ucvm-linux]
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: [3.7]
+    steps:
+    - name: set UCVM_SRC_PATH 
+      run: echo "UCVM_SRC_PATH=$RUNNER_WORKSPACE/muscaltdb/ucvm" >> $GITHUB_ENV
+    - name: set UCVM_INSTALL_PATH 
+      run: echo "UCVM_INSTALL_PATH=$RUNNER_WORKSPACE/muscaltdb/target" >> $GITHUB_ENV
+### build ucvm(main) first 
+    - name: get-ucvm 
+      uses: actions/checkout@v4
+      with: 
+        repository: 'SCECcode/UCVM'
+##        ref: testMei
+        path: ucvm
+    - id: build-ucvm
+      name: build ucvm
+      uses: ./ucvm/.github/actions/build-ucvm-action
+      with:
+         initiating-repo: 'muscaltdb'
+         target-model: 'muscaltdb'
+#   - name: Start SSH debug with upterm
+#     if: ${{ failure() }}
+#     uses: owenthereal/action-upterm@v1
+#     with:
+#         limit-access-to-actor: true
+#   - name: sleep to keep runner alive
+#     run: sleep 3600
+    - name: get-result
+      run: more ${{ steps.build-ucvm.outputs.build-log }}
+      shell: bash
+    - name: move stock muscaltdb away
+      run: (rm -rf $RUNNER_WORKSPACE/muscaltdb/ucvm/work/model/muscaltdb)
+      shell: bash
+### build muscaltdb from github 
+    - name: checkout muscaltdb main
+      uses: actions/checkout@v4
+      with: 
+        path: muscaltdb
+    - name: move it to the right location
+      run: (mv muscaltdb $RUNNER_WORKSPACE/muscaltdb/ucvm/work/model; pwd; ls)
+      shell: bash
+#    - name: Start SSH debug with tmate
+#      if: ${{ failure() }}
+#      uses: mxschmitt/action-tmate@v3
+#      with:
+#        limit-access-to-actor: true
+#    - name: sleep to keep runner alive
+#      run: sleep 3600
+    - name: build muscaltdb as part of ucvm 
+      run: (cd $RUNNER_WORKSPACE/muscaltdb/ucvm/work/model/muscaltdb; ./.github/scripts/muscaltdb-build-with-ucvm.sh)
+      shell: bash
+#    - name: Start SSH debug with tmate
+#      if: ${{ failure() }}
+#      uses: mxschmitt/action-tmate@v3
+#      with:
+#        limit-access-to-actor: true
+#    - name: sleep to keep runner alive
+#      run: sleep 3600
+### check ucvm is still valid
+    - name: check on ucvm
+      run: (source $UCVM_INSTALL_PATH/conf/ucvm_env.sh; ucvm_query -H)
+      shell: bash
+    - name: test muscaltdb with ucvm
+      run: (cd $RUNNER_WORKSPACE/muscaltdb/ucvm/work/model/muscaltdb; source $UCVM_INSTALL_PATH/conf/ucvm_env.sh; ./.github/scripts/muscaltdb-test-ucvm.sh)
+      shell: bash
+    - name: test muscaltdb under ucvm
+      run: (cd $RUNNER_WORKSPACE/muscaltdb/ucvm; source $UCVM_INSTALL_PATH/conf/ucvm_env.sh; ./.github/scripts/ucvm-test.sh)
+      shell: bash
+#    - name: Start SSH debug with tmate
+#      if: ${{ failure() }}
+#      uses: mxschmitt/action-tmate@v3
+#      with:
+#        limit-access-to-actor: true
+#    - name: sleep to keep runner alive
+#      run: sleep 3600
+
+
+
+
