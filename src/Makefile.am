@@ -1,47 +1,48 @@
-# Autoconf/automake file
+# Define include headers to install in $(prefix)/include
+include_HEADERS = muscaltdb.h
 
-objects = muscaltdb_util.o muscaltdb_dataset.o cJSON.o kdtree_util.o
+# Define executable binaries to install in $(prefix)/bin
+bin_PROGRAMS = muscaltdb_query
 
-# General compiler/linker flags
-AM_CFLAGS = ${CFLAGS} ${CPPFLAGS} -I$(prefix)/include -I${UCVM_INSTALL_PATH}/lib/tiledb/include
-AM_LDFLAGS = ${LDFLAGS} -L$(prefix)/lib ${LIBS} -L${UCVM_INSTALL_PATH}/lib/tiledb/lib64 -ltiledb -Wl,-rpath,${UCVM_INSTALL_PATH}/lib/tiledb/lib64 -lm
+# Define shared/static libraries to install in $(prefix)/lib
+lib_LTLIBRARIES = libmuscaltdb.la
 
-TARGETS = muscaltdb_query libmuscaltdb.a libmuscaltdb.so 
+# ------------------------------------------------------------------------------
+# Library Definition
+# ------------------------------------------------------------------------------
 
-all: $(TARGETS)
+# Sources for the shared/static library
+libmuscaltdb_la_SOURCES = \
+	muscaltdb.c \
+	muscaltdb_dataset.c \
+	muscaltdb_util.c \
+	cJSON.c \
+	kdtree_util.c
 
-install:
-	mkdir -p ${prefix}
-	mkdir -p ${prefix}/lib
-	mkdir -p ${prefix}/include
-	mkdir -p ${prefix}/bin
-	cp libmuscaltdb.so ${prefix}/lib
-	cp libmuscaltdb.a ${prefix}/lib
-	cp muscaltdb.h ${prefix}/include
-	cp muscaltdb_query ${prefix}/bin
+# Include path and flags for compiling the library
+libmuscaltdb_la_CPPFLAGS = -I$(top_srcdir) -I$(prefix)/include -DDYNAMIC_LIBRARY
 
-clean:
-	rm -rf $(TARGETS)
-	rm -rf *.o
+# Linker flags and libraries for libmuscaltdb
+libmuscaltdb_la_LDFLAGS = -version-info 1:0:0 -L$(prefix)/lib
+libmuscaltdb_la_LIBADD = -lm $(LIBS)
 
-libmuscaltdb.a: muscaltdb_static.o muscaltdb_util.o muscaltdb_dataset.o cJSON.o kdtree_util.o
-	$(AR) rcs $@ $^
+# ------------------------------------------------------------------------------
+# Executables Definitions
+# ------------------------------------------------------------------------------
 
-libmuscaltdb.so: muscaltdb.o muscaltdb_util.o muscaltdb_dataset.o cJSON.o kdtree_util.o
-	$(CC) -shared $(AM_FCFLAGS) -o libmuscaltdb.so $^ $(AM_LDFLAGS)
+AM_CPPFLAGS = -I$(top_srcdir) -I$(prefix)/include
+AM_LDFLAGS = -L$(prefix)/lib
 
-muscaltdb.o: muscaltdb.c
-	$(CC) -fPIC -DDYNAMIC_LIBRARY -o $@ -c $^ $(AM_CFLAGS)
+# muscaltdb_query links against our Libtool library
+muscaltdb_query_SOURCES = muscaltdb_query.c
+muscaltdb_query_LDADD = libmuscaltdb.la -lm $(LIBS)
 
-muscaltdb_static.o: muscaltdb.c
-	$(CC) -o $@ -c $^ $(AM_CFLAGS)
-
-$(objects): %.o: %.c
-	$(CC) -fPIC -DDYNAMIC_LIBRARY $(AM_CFLAGS) -o $@ -c $^
-
-muscaltdb_query.o: muscaltdb_query.c
-	$(CC) $(AM_CFLAGS) -o $@ -c $^
-
-muscaltdb_query : muscaltdb_query.o libmuscaltdb.a
-	$(CC) -o $@ $^ $(AM_LDFLAGS)
-
+# ------------------------------------------------------------------------------
+# macOS .so compatibility symlink
+# ------------------------------------------------------------------------------
+install-exec-hook:
+	@if test "`uname -s`" = "Darwin"; then \
+		cd $(DESTDIR)$(libdir) && \
+		rm -f libmuscaltdb.so && \
+		ln -s libmuscaltdb.dylib libmuscaltdb.so; \
+	fi

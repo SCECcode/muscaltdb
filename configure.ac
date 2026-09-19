@@ -38,43 +38,23 @@ AC_ARG_ENABLE([shared],
 
 
 ## for conversion code in tools directory 
-dnl netcdf
-AC_ARG_ENABLE([netcdf],
-    [AC_HELP_STRING([--enable-netcdf],
-        [install netCDF library @<:@default=yes@:>@])],
-        [if test "$enableval" = yes ; then install_netcdf=yes; else install_netcdf=no; fi],
-        [install_netcdf=yes])
-AM_CONDITIONAL([INSTALL_NETCDF], [test "$install_netcdf" = yes])
-AC_ARG_WITH([netcdf-incdir],
-  [AS_HELP_STRING([--with-netcdf-incdir], [directory containing netCDF header files])],
-  [with_netcdf_incdir="$withval"],
-  [with_netcdf_incdir=no])
-AC_SUBST(with_netcdf_incdir)
-AC_ARG_WITH([netcdf-libdir],
-  [AS_HELP_STRING([--with-netcdf-libdir], [directory containing netCDF library])],
-  [with_netcdf_libdir="$withval"],
-  [with_netcdf_libdir=no])
-AC_SUBST(with_netcdf_libdir)
-
-dnl hdf5
-AC_ARG_ENABLE([hdf5],
-    [AC_HELP_STRING([--enable-hdf5],
-        [install HDF5 library @<:@default=yes@:>@])],
-        [if test "$enableval" = yes ; then install_hdf5=yes; else install_hdf5=no; fi],
-        [install_hdf5=yes])
-AM_CONDITIONAL([INSTALL_HDF5], [test "$install_hdf5" = yes])
-AC_ARG_WITH([hdf5-incdir],
-  [AS_HELP_STRING([--with-hdf5-incdir], [directory containing HDF5 header files])],
-  [with_hdf5_incdir="$withval"],
-  [with_hdf5_incdir=no])
-AC_SUBST(with_hdf5_incdir)
-AC_ARG_WITH([hdf5-libdir],
-  [AS_HELP_STRING([--with-hdf5-libdir], [directory containing HDF5 library])],
-  [with_hdf5_libdir="$withval"],
-  [with_hdf5_libdir=no])
-AC_SUBST(with_hdf5_libdir)
-
-
+dnl tiledb
+AC_ARG_ENABLE([tiledb],
+    [AC_HELP_STRING([--enable-tiledb],
+        [install TileDB library @<:@default=yes@:>@])],
+        [if test "$enableval" = yes ; then install_tiledb=yes; else install_tiledb=no; fi],
+        [install_tiledb=yes])
+AM_CONDITIONAL([INSTALL_TILEDB], [test "$install_tiledb" = yes])
+AC_ARG_WITH([tiledb-incdir],
+  [AS_HELP_STRING([--with-tiledb-incdir], [directory containing TILEDB header files])],
+  [with_tiledb_incdir="$withval"],
+  [with_tiledb_incdir=no])
+AC_SUBST(with_tiledb_incdir)
+AC_ARG_WITH([tiledb-libdir],
+  [AS_HELP_STRING([--with-tiledb-libdir], [directory containing TILEDB library])],
+  [with_tiledb_libdir="$withval"],
+  [with_tiledb_libdir=no])
+AC_SUBST(with_tiledb_libdir)
 
 
 # export the variable for Makefile.in / Automake
@@ -92,9 +72,24 @@ dnl
 dnl Setup environment so dependencies are used in build
 dnl
 
+dnl TILEDB (required)
+if test "$install_tiledb" = yes ; then
+  TILEDB_INCLUDES=""
+  TILEDB_LDFLAGS="-ltiledb"
+else
+  SCEC_TILEDB_HEADER
+  SCEC_TILEDB_LIB
+fi
+if test "$with_tiledb_incdir" != no ; then
+  TILEDB_INCLUDES="-I$with_tiledb_incdir"
+fi
+if test "$with_tiledb_libdir" != no ; then
+  TILEDB_LDFLAGS="-L$with_tiledb_libdir -ltiledb"
+fi
+
 CFLAGS="$CFLAGS"
-CPPFLAGS="-I$prefix/include $CPPFLAGS"
-LDFLAGS="-L$prefix/lib -L$prefix/lib64 $LDFLAGS"
+CPPFLAGS="-I$prefix/include $TILEDB_INCLUDES $CPPFLAGS"
+LDFLAGS="-L$prefix/lib -L$prefix/lib64 $TILEDB_LDFLAGS $LDFLAGS"
 
 dnl
 dnl Verify configuration
@@ -110,7 +105,7 @@ if test x"$CVM_LARGEDATA_DIR" != x; then
      AM_CONDITIONAL([WITH_MUSCALTDB_LARGEDATA_DIR], true)
      AC_SUBST(MUSCALTDB_LARGEDATA_DIR)
    else 
-     AC_CHECK_FILE([$MUSCALTDB_LARGEDATA_DIR/model_MUSCALTDB_CANVAS_dll0.01_vardz_float32_cmpd.tiledb],
+     AC_CHECK_FILE([$MUSCALTDB_LARGEDATA_DIR/model_MUSCAL_CANVAS_dll0.01_vardz_float32_cmpd.tiledb],
                 [AM_CONDITIONAL([WITH_MUSCALTDB_LARGEDATA_DIR], true) AC_SUBST(MUSCALTDB_LARGEDATA_DIR)],
                 [AM_CONDITIONAL([WITH_MUSCALTDB_LARGEDATA_DIR], false)])
    fi
