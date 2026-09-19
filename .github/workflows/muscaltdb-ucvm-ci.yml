@@ -36,6 +36,7 @@ jobs:
       with:
          initiating-repo: 'muscaltdb'
          target-model: 'muscaltdb'
+         target-branch: 'withTileDB'
     - name: get-result
       run: more ${{ steps.build-ucvm.outputs.build-log }}
       shell: bash
@@ -97,6 +98,7 @@ jobs:
       with:
          initiating-repo: 'muscaltdb'
          target-model: 'muscaltdb'
+         target-branch: 'withTileDB'
 #   - name: Start SSH debug with upterm
 #     if: ${{ failure() }}
 #     uses: owenthereal/action-upterm@v1
